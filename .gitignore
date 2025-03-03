@@ -1,0 +1,7 @@
+elf2sun
+
+build/*
+!build/.keep
+
+programs/*
+!programs/.keep
