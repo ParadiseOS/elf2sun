@@ -9,11 +9,10 @@ typedef struct {
     uint32_t data_size;             // Program data section size
     char* data_data;                // Program data section data
 
-    uint32_t ro_data_size;          // Program read-only size
-    char* ro_data_data;             // Program read-only data
+    uint32_t rodata_size;          // Program read-only size
+    char* rodata_data;             // Program read-only data
 
     uint32_t bss_size;              // Program bss size
-    char* bss_data;                 // Program bss data
     uint32_t bss_alloc_size;        // Program bss allocation size
 } Program;
 
