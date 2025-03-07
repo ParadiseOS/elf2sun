@@ -5,7 +5,7 @@
 for file in programs/*.c; do
   [ -f "$file" ] || continue
   filename=$(basename -- "$file" .c)
-  gcc "$file" -o "build/$filename.out" -Wall -Wextra -m32
+  gcc "$file" -o "build/$filename.out" -Wall -Wextra -m32 -static -nostdlib
 done
 
 # To build in 32 bit you need multilib gcc

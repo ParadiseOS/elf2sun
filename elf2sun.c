@@ -94,6 +94,13 @@ Program* parse_program(const char* filename) {
     char* sh_strs = malloc(sh_strtab.sh_size);
     pread(fd, sh_strs, sh_strtab.sh_size, sh_strtab.sh_offset);
 
+    // Set section sizes to 0 (incase program doesn't contain data)
+    program->text_size = 0;
+    program->data_size = 0;
+    program->rodata_size = 0;
+    program->bss_size = 0;
+    program->bss_alloc_size = 0;
+
     for (int i = 0; i < elf_header.e_shnum; i++) {
         char* name = &sh_strs[section_headers[i].sh_name];
 
@@ -116,11 +123,9 @@ Program* parse_program(const char* filename) {
             program->bss_size = section_headers[i].sh_size;
             for (int k = 0; k < elf_header.e_phnum; k++) {
                 Elf32_Phdr* ph = &program_headers[k];
-
-                if (ph->p_type == PT_LOAD &&
-                    section_headers[i].sh_addr >= ph->p_vaddr &&
-                    section_headers[i].sh_addr < ph->p_vaddr + ph->p_memsz) {
-                    program->bss_alloc_size = ph->p_memsz;
+                if (ph->p_type == PT_LOAD && ph->p_memsz > ph->p_filesz) {
+                    program->bss_alloc_size = ph->p_memsz - ph->p_filesz;
+                    break;
                 }
             }
         }
@@ -161,6 +166,42 @@ int main(int argc, char** argv) {
         printf("Collecting data on %s...\n", argv[i]);
         program[i-1] = parse_program(argv[i]);
     }
+
+    #ifdef TESTING
+    for (int i = 0; i < executable_count; i++) {
+        printf("Info on file: %s\n", argv[i+1]);
+        printf("Text Size-   %d\n", program[i]->text_size);
+        printf("Data Size-   %d\n", program[i]->data_size);
+        printf("Rodata Size- %d\n", program[i]->rodata_size);
+        printf("BSS Size-    %d\n", program[i]->bss_size);
+        printf("BSS Alloc-   %d\n", program[i]->bss_alloc_size);
+        printf(".text section data");
+        for (int j = 0; j < program[i]->text_size; j++) {
+            if (j % 4 == 0)
+                printf(" ");
+            if (j % 16 == 0)
+                printf("\n");
+            printf("%02x", program[i]->text_data[j]);
+        }
+        printf("\n.data section data");
+        for (int j = 0; j < program[i]->data_size; j++) {
+            if (j % 4 == 0)
+                printf(" ");
+            if (j % 16 == 0)
+                printf("\n");
+            printf("%02x", program[i]->data_data[j]);
+        }
+        printf("\n.rodata section data");
+        for (int j = 0; j < program[i]->rodata_size; j++) {
+            if (j % 4 == 0)
+                printf(" ");
+            if (j % 16 == 0)
+                printf("\n");
+            printf("%02x", program[i]->rodata_data[j]);
+        }
+        printf("\n\n");
+    }
+    #endif
 
     printf("Constructing sun executable\n");
     // Create new file

@@ -4,13 +4,13 @@
 
 typedef struct {
     uint32_t text_size;             // Program text size
-    char* text_data;                // Program text data
+    unsigned char* text_data;                // Program text data
 
     uint32_t data_size;             // Program data section size
-    char* data_data;                // Program data section data
+    unsigned char* data_data;                // Program data section data
 
     uint32_t rodata_size;          // Program read-only size
-    char* rodata_data;             // Program read-only data
+    unsigned char* rodata_data;             // Program read-only data
 
     uint32_t bss_size;              // Program bss size
     uint32_t bss_alloc_size;        // Program bss allocation size
