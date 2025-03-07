@@ -1,4 +1,5 @@
 elf2sun
+binary.sun
 
 build/*
 !build/.keep

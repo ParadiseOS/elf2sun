@@ -160,6 +160,7 @@ int main(int argc, char** argv) {
     printf("Valid ELF Files...\n");
 
     int executable_count = argc-1;
+    unsigned char executable_count_byte = (unsigned char)executable_count;
     Program* program[executable_count];
 
     for (int i = 1; i < argc; i++) {
@@ -203,10 +204,43 @@ int main(int argc, char** argv) {
     }
     #endif
 
+    // Construct Table Entries
+    uint32_t current_offset = 4 + (executable_count * sizeof(TableEntry));
+    TableEntry* table_entry[executable_count];
+    for (int i = 0; i < executable_count; i++) {
+        table_entry[i] = (TableEntry*)malloc(sizeof(TableEntry));
+        strncpy(table_entry[i]->name, argv[i+1], 15);
+        table_entry[i]->name[15] = '\0';
+        table_entry[i]->offset = current_offset;
+        table_entry[i]->text_size = program[i]->text_size;
+        table_entry[i]->data_size = program[i]->data_size;
+        table_entry[i]->rodata_size = program[i]->rodata_size;
+        table_entry[i]->bss_size = program[i]->bss_size;
+        table_entry[i]->bss_alloc = program[i]->bss_alloc_size;
+        current_offset += table_entry[i]->text_size + table_entry[i]->data_size + table_entry[i]->rodata_size;
+    }
+
     printf("Constructing sun executable\n");
-    // Create new file
-    // Add magic bytes
-    // Add executable count in 1 byte
+    int sun_fd = open("binary.sun", O_CREAT | O_WRONLY | O_TRUNC, 0644);
+    write(sun_fd, "SUN", 3); // Magic bytes
+    write(sun_fd, &executable_count_byte, 1); // Exe count
+    for (int i = 0; i < executable_count; i++) { // Table Entry info
+        write(sun_fd, table_entry[i]->name, 16);
+        write(sun_fd, &table_entry[i]->offset, 4);
+        write(sun_fd, &table_entry[i]->text_size, 4);
+        write(sun_fd, &table_entry[i]->data_size, 4);
+        write(sun_fd, &table_entry[i]->rodata_size, 4);
+        write(sun_fd, &table_entry[i]->bss_size, 4);
+        write(sun_fd, &table_entry[i]->bss_alloc, 4);
+    }
+    for (int i = 0; i < executable_count; i++) { // Section data
+        write(sun_fd, program[i]->text_data, program[i]->text_size);
+        write(sun_fd, program[i]->data_data, program[i]->data_size);
+        write(sun_fd, program[i]->rodata_data, program[i]->rodata_size);
+    }
+
+
+    close(sun_fd);
 
     for (int i = 0; i < executable_count; i++) {
         free(program[i]->text_data);
