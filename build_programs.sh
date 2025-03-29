@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 
-# This script builds all c files in programs/ as a 32-bit ELF executable and puts them in build/
+echo "Building elf2sun"
+gcc elf2sun.c -o elf2sun
 
 # Iterate over subdirectories in programs/
 for dir in programs/*/; do
