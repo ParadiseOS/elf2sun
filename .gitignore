@@ -6,3 +6,4 @@ build/*
 
 programs/*
 !programs/.keep
+!programs/example_build.sh

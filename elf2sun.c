@@ -209,7 +209,7 @@ int main(int argc, char** argv) {
     TableEntry* table_entry[executable_count];
     for (int i = 0; i < executable_count; i++) {
         table_entry[i] = (TableEntry*)malloc(sizeof(TableEntry));
-        strncpy(table_entry[i]->name, argv[i+1], 15);
+        strncpy(table_entry[i]->name, strrchr(argv[i+1], '/') ? strrchr(argv[i+1], '/') + 1 : argv[i+1], 15);
         table_entry[i]->name[15] = '\0';
         table_entry[i]->offset = current_offset;
         table_entry[i]->text_size = program[i]->text_size;
