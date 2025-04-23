@@ -100,7 +100,6 @@ Program* parse_program(const char* filename) {
     program->data_size = 0;
     program->rodata_size = 0;
     program->bss_size = 0;
-    program->bss_alloc_size = 0;
 
     for (int i = 0; i < elf_header.e_shnum; i++) {
         const char* name = &sh_strs[section_headers[i].sh_name];
@@ -122,13 +121,6 @@ Program* parse_program(const char* filename) {
             pread(fd, program->rodata_data, program->rodata_size, rodata_offset);
         } else if (strcmp(name, ".bss") == 0) {                                 // BSS Section
             program->bss_size = section_headers[i].sh_size;
-            for (int k = 0; k < elf_header.e_phnum; k++) {
-                Elf32_Phdr* ph = &program_headers[k];
-                if (ph->p_type == PT_LOAD && ph->p_memsz > ph->p_filesz) {
-                    program->bss_alloc_size = ph->p_memsz - ph->p_filesz;
-                    break;
-                }
-            }
         } else if (strcmp(name, ".symtab") == 0) {                              // Symbol Table
             Elf32_Shdr symtab = section_headers[i];
             Elf32_Shdr strtab = section_headers[symtab.sh_link];
@@ -197,7 +189,6 @@ int main(int argc, char** argv) {
         printf("Data Size-   %d\n", program[i]->data_size);
         printf("Rodata Size- %d\n", program[i]->rodata_size);
         printf("BSS Size-    %d\n", program[i]->bss_size);
-        printf("BSS Alloc-   %d\n", program[i]->bss_alloc_size);
         printf(".text section data");
         for (int j = 0; j < program[i]->text_size; j++) {
             if (j % 4 == 0)
@@ -239,7 +230,6 @@ int main(int argc, char** argv) {
         table_entry[i]->data_size = program[i]->data_size;
         table_entry[i]->rodata_size = program[i]->rodata_size;
         table_entry[i]->bss_size = program[i]->bss_size;
-        table_entry[i]->bss_alloc = program[i]->bss_alloc_size;
         current_offset += table_entry[i]->text_size + table_entry[i]->data_size + table_entry[i]->rodata_size;
     }
 
@@ -255,7 +245,6 @@ int main(int argc, char** argv) {
         write(sun_fd, &table_entry[i]->data_size, 4);
         write(sun_fd, &table_entry[i]->rodata_size, 4);
         write(sun_fd, &table_entry[i]->bss_size, 4);
-        write(sun_fd, &table_entry[i]->bss_alloc, 4);
     }
     
     for (int i = 0; i < executable_count; i++) { // Section data

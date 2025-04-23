@@ -15,7 +15,6 @@ typedef struct {
     unsigned char* rodata_data;             // Program read-only data
 
     uint32_t bss_size;              // Program bss size
-    uint32_t bss_alloc_size;        // Program bss allocation size
 } Program;
 
 typedef struct {
@@ -26,5 +25,4 @@ typedef struct {
     uint32_t data_size;             // Size of data section
     uint32_t rodata_size;           // Size of read-only section
     uint32_t bss_size;              // Size of bss section
-    uint32_t bss_alloc;             // Size of bss section in memory
 } TableEntry;
