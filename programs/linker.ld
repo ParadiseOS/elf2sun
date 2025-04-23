@@ -1,5 +1,3 @@
-ENTRY(_start)
-
 SECTIONS {
     /* Process Origin */
     . = 0x40000;

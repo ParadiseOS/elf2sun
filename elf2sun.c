@@ -95,6 +95,7 @@ Program* parse_program(const char* filename) {
     pread(fd, sh_strs, sh_strtab.sh_size, sh_strtab.sh_offset);
 
     // Set section sizes to 0 (incase program doesn't contain data)
+    program->entry_point = 0;
     program->text_size = 0;
     program->data_size = 0;
     program->rodata_size = 0;
@@ -102,7 +103,7 @@ Program* parse_program(const char* filename) {
     program->bss_alloc_size = 0;
 
     for (int i = 0; i < elf_header.e_shnum; i++) {
-        char* name = &sh_strs[section_headers[i].sh_name];
+        const char* name = &sh_strs[section_headers[i].sh_name];
 
         if (strcmp(name, ".text") == 0) {                                       // Text Section
             program->text_size = section_headers[i].sh_size;
@@ -128,6 +129,26 @@ Program* parse_program(const char* filename) {
                     break;
                 }
             }
+        } else if (strcmp(name, ".symtab") == 0) {                              // Symbol Table
+            Elf32_Shdr symtab = section_headers[i];
+            Elf32_Shdr strtab = section_headers[symtab.sh_link];
+
+            int num_syms = symtab.sh_size / sizeof(Elf32_Sym);
+            Elf32_Sym* syms = malloc(symtab.sh_size);
+            char* strtab_data = malloc(strtab.sh_size);
+
+            pread(fd, syms, symtab.sh_size, symtab.sh_offset);
+            pread(fd, strtab_data, strtab.sh_size, strtab.sh_offset);
+
+            for (int j = 0; j < num_syms; j++) {
+                const char* sym_name = &strtab_data[syms[j].st_name];
+                if (strcmp(sym_name, "main") == 0) {
+                    program->entry_point = syms[j].st_value;
+                    break;
+                }
+            }
+            free(syms);
+            free(strtab_data);
         }
     }
 
@@ -171,6 +192,7 @@ int main(int argc, char** argv) {
     #ifdef TESTING
     for (int i = 0; i < executable_count; i++) {
         printf("Info on file: %s\n", argv[i+1]);
+        printf("Entry Point- %d\n", program[i]->entry_point);
         printf("Text Size-   %d\n", program[i]->text_size);
         printf("Data Size-   %d\n", program[i]->data_size);
         printf("Rodata Size- %d\n", program[i]->rodata_size);
@@ -212,6 +234,7 @@ int main(int argc, char** argv) {
         strncpy(table_entry[i]->name, strrchr(argv[i+1], '/') ? strrchr(argv[i+1], '/') + 1 : argv[i+1], 15);
         table_entry[i]->name[15] = '\0';
         table_entry[i]->offset = current_offset;
+        table_entry[i]->entry_point = program[i]->entry_point;
         table_entry[i]->text_size = program[i]->text_size;
         table_entry[i]->data_size = program[i]->data_size;
         table_entry[i]->rodata_size = program[i]->rodata_size;
@@ -227,26 +250,34 @@ int main(int argc, char** argv) {
     for (int i = 0; i < executable_count; i++) { // Table Entry info
         write(sun_fd, table_entry[i]->name, 16);
         write(sun_fd, &table_entry[i]->offset, 4);
+        write(sun_fd, &table_entry[i]->entry_point, 4);
         write(sun_fd, &table_entry[i]->text_size, 4);
         write(sun_fd, &table_entry[i]->data_size, 4);
         write(sun_fd, &table_entry[i]->rodata_size, 4);
         write(sun_fd, &table_entry[i]->bss_size, 4);
         write(sun_fd, &table_entry[i]->bss_alloc, 4);
     }
+    
     for (int i = 0; i < executable_count; i++) { // Section data
-        write(sun_fd, program[i]->text_data, program[i]->text_size);
-        write(sun_fd, program[i]->data_data, program[i]->data_size);
-        write(sun_fd, program[i]->rodata_data, program[i]->rodata_size);
+        if (program[i]->text_size > 0)
+            write(sun_fd, program[i]->text_data, program[i]->text_size);
+        if (program[i]->data_size > 0)
+            write(sun_fd, program[i]->data_data, program[i]->data_size);
+        if (program[i]->rodata_size > 0)
+            write(sun_fd, program[i]->rodata_data, program[i]->rodata_size);
     }
-
 
     close(sun_fd);
 
     for (int i = 0; i < executable_count; i++) {
-        free(program[i]->text_data);
-        free(program[i]->data_data);
-        free(program[i]->rodata_data);
+        if (program[i]->text_size > 0)
+            free(program[i]->text_data);
+        if (program[i]->data_size > 0)
+            free(program[i]->data_data);
+        if (program[i]->rodata_size > 0)
+            free(program[i]->rodata_data);
         free(program[i]);
+        free(table_entry[i]);
     }
 
     return EXIT_SUCCESS;
