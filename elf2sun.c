@@ -186,8 +186,8 @@ int main(int argc, char** argv) {
         printf("Info on file: %s\n", argv[i+1]);
         printf("Entry Point- %x\n", program[i]->entry_point);
         printf("Text Size-   %x\n", program[i]->text_size);
+        printf("ROdata Size- %x\n", program[i]->rodata_size);
         printf("Data Size-   %x\n", program[i]->data_size);
-        printf("Rodata Size- %x\n", program[i]->rodata_size);
         printf("BSS Size-    %x\n", program[i]->bss_size);
         printf(".text section data");
         for (int j = 0; j < program[i]->text_size; j++) {
@@ -197,14 +197,6 @@ int main(int argc, char** argv) {
                 printf("\n");
             printf("%02x", program[i]->text_data[j]);
         }
-        printf("\n.data section data");
-        for (int j = 0; j < program[i]->data_size; j++) {
-            if (j % 4 == 0)
-                printf(" ");
-            if (j % 16 == 0)
-                printf("\n");
-            printf("%02x", program[i]->data_data[j]);
-        }
         printf("\n.rodata section data");
         for (int j = 0; j < program[i]->rodata_size; j++) {
             if (j % 4 == 0)
@@ -212,6 +204,14 @@ int main(int argc, char** argv) {
             if (j % 16 == 0)
                 printf("\n");
             printf("%02x", program[i]->rodata_data[j]);
+        }
+        printf("\n.data section data");
+        for (int j = 0; j < program[i]->data_size; j++) {
+            if (j % 4 == 0)
+                printf(" ");
+            if (j % 16 == 0)
+                printf("\n");
+            printf("%02x", program[i]->data_data[j]);
         }
         printf("\n\n");
     }
@@ -227,10 +227,10 @@ int main(int argc, char** argv) {
         table_entry[i]->offset = current_offset;
         table_entry[i]->entry_point = program[i]->entry_point;
         table_entry[i]->text_size = program[i]->text_size;
-        table_entry[i]->data_size = program[i]->data_size;
         table_entry[i]->rodata_size = program[i]->rodata_size;
+        table_entry[i]->data_size = program[i]->data_size;
         table_entry[i]->bss_size = program[i]->bss_size;
-        current_offset += table_entry[i]->text_size + table_entry[i]->data_size + table_entry[i]->rodata_size;
+        current_offset += table_entry[i]->text_size + table_entry[i]->rodata_size + table_entry[i]->data_size;
     }
 
     printf("Constructing sun executable\n");
@@ -242,18 +242,18 @@ int main(int argc, char** argv) {
         write(sun_fd, &table_entry[i]->offset, 4);
         write(sun_fd, &table_entry[i]->entry_point, 4);
         write(sun_fd, &table_entry[i]->text_size, 4);
-        write(sun_fd, &table_entry[i]->data_size, 4);
         write(sun_fd, &table_entry[i]->rodata_size, 4);
+        write(sun_fd, &table_entry[i]->data_size, 4);
         write(sun_fd, &table_entry[i]->bss_size, 4);
     }
     
     for (int i = 0; i < executable_count; i++) { // Section data
         if (program[i]->text_size > 0)
             write(sun_fd, program[i]->text_data, program[i]->text_size);
-        if (program[i]->data_size > 0)
-            write(sun_fd, program[i]->data_data, program[i]->data_size);
         if (program[i]->rodata_size > 0)
             write(sun_fd, program[i]->rodata_data, program[i]->rodata_size);
+        if (program[i]->data_size > 0)
+            write(sun_fd, program[i]->data_data, program[i]->data_size);
     }
 
     close(sun_fd);
@@ -261,10 +261,10 @@ int main(int argc, char** argv) {
     for (int i = 0; i < executable_count; i++) {
         if (program[i]->text_size > 0)
             free(program[i]->text_data);
-        if (program[i]->data_size > 0)
-            free(program[i]->data_data);
         if (program[i]->rodata_size > 0)
             free(program[i]->rodata_data);
+        if (program[i]->data_size > 0)
+            free(program[i]->data_data);
         free(program[i]);
         free(table_entry[i]);
     }
