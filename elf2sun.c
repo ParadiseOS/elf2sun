@@ -184,11 +184,11 @@ int main(int argc, char** argv) {
     #ifdef TESTING
     for (int i = 0; i < executable_count; i++) {
         printf("Info on file: %s\n", argv[i+1]);
-        printf("Entry Point- %d\n", program[i]->entry_point);
-        printf("Text Size-   %d\n", program[i]->text_size);
-        printf("Data Size-   %d\n", program[i]->data_size);
-        printf("Rodata Size- %d\n", program[i]->rodata_size);
-        printf("BSS Size-    %d\n", program[i]->bss_size);
+        printf("Entry Point- %x\n", program[i]->entry_point);
+        printf("Text Size-   %x\n", program[i]->text_size);
+        printf("Data Size-   %x\n", program[i]->data_size);
+        printf("Rodata Size- %x\n", program[i]->rodata_size);
+        printf("BSS Size-    %x\n", program[i]->bss_size);
         printf(".text section data");
         for (int j = 0; j < program[i]->text_size; j++) {
             if (j % 4 == 0)
