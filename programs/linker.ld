@@ -1,6 +1,6 @@
 SECTIONS {
     /* Process Origin */
-    . = 0x401000;
+    . = 0x402000;
 
     .text ALIGN(4K) : {
         *(.text)
