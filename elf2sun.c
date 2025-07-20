@@ -1,18 +1,18 @@
 #define _XOPEN_SOURCE 500 // For pread
+#include "elf2sun.h"
+#include <elf.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <string.h>
-#include <elf.h>
-#include "elf2sun.h"
+#include <unistd.h>
 
 /**
  * @brief Checks if a file is a valid elf exe
  * @param filename The name of the file
  * @return int 1 if valid, 0 if not
  */
-int is_valid_elf_file(const char* filename) {
+int is_valid_elf_file(const char *filename) {
     int fd = open(filename, O_RDONLY);
     if (fd < 0) {
         perror(filename);
@@ -22,31 +22,40 @@ int is_valid_elf_file(const char* filename) {
     unsigned char e_ident[EI_NIDENT];
     if (read(fd, e_ident, EI_NIDENT) != EI_NIDENT) {
         close(fd);
-        fprintf(stderr, "%s: Not a valid ELF file (could not read header)\n", filename);
+        fprintf(
+            stderr, "%s: Not a valid ELF file (could not read header)\n",
+            filename
+        );
         return 0;
     }
 
     Elf32_Half e_type;
     if (read(fd, &e_type, sizeof(Elf32_Half)) != sizeof(Elf32_Half)) {
         close(fd);
-        fprintf(stderr, "%s: Not a valid ELF file (could not read type)\n", filename);
+        fprintf(
+            stderr, "%s: Not a valid ELF file (could not read type)\n", filename
+        );
         return 0;
     }
 
     Elf32_Half e_machine;
     if (read(fd, &e_machine, sizeof(Elf32_Half)) != sizeof(Elf32_Half)) {
         close(fd);
-        fprintf(stderr, "%s: Not a valid ELF file (could not read machine)\n", filename);
+        fprintf(
+            stderr, "%s: Not a valid ELF file (could not read machine)\n",
+            filename
+        );
         return 0;
     }
 
     close(fd);
 
-    if (e_ident[EI_MAG0] != ELFMAG0 ||
-        e_ident[EI_MAG1] != ELFMAG1 ||
-        e_ident[EI_MAG2] != ELFMAG2 ||
-        e_ident[EI_MAG3] != ELFMAG3) {
-        fprintf(stderr, "%s: Not a valid ELF file (incrrect magic bytes)\n", filename);
+    if (e_ident[EI_MAG0] != ELFMAG0 || e_ident[EI_MAG1] != ELFMAG1 ||
+        e_ident[EI_MAG2] != ELFMAG2 || e_ident[EI_MAG3] != ELFMAG3) {
+        fprintf(
+            stderr, "%s: Not a valid ELF file (incrrect magic bytes)\n",
+            filename
+        );
         return 0;
     }
 
@@ -54,7 +63,7 @@ int is_valid_elf_file(const char* filename) {
         fprintf(stderr, "%s: Not a valid ELF file (not 32-bit)\n", filename);
         return 0;
     }
-    
+
     if (e_machine != EM_386) {
         fprintf(stderr, "%s: Not a valid ELF file (not Intel x86)\n", filename);
         return 0;
@@ -66,10 +75,10 @@ int is_valid_elf_file(const char* filename) {
 /**
  * @brief Create a program struct of a file
  * @param filename The name of the file
- * @return Program* 
+ * @return Program*
  */
-Program* parse_program(const char* filename) {
-    Program* program = (Program*)malloc(sizeof(Program));
+Program *parse_program(const char *filename) {
+    Program *program = (Program *) malloc(sizeof(Program));
 
     int fd = open(filename, O_RDONLY);
     if (fd < 0) {
@@ -83,15 +92,21 @@ Program* parse_program(const char* filename) {
 
     // Read section headers
     Elf32_Shdr section_headers[elf_header.e_shnum];
-    pread(fd, section_headers, sizeof(Elf32_Shdr) * elf_header.e_shnum, elf_header.e_shoff);
+    pread(
+        fd, section_headers, sizeof(Elf32_Shdr) * elf_header.e_shnum,
+        elf_header.e_shoff
+    );
 
     // Read program headers
     Elf32_Phdr program_headers[elf_header.e_phnum];
-    pread(fd, program_headers, sizeof(Elf32_Phdr) * elf_header.e_phnum, elf_header.e_phoff);
+    pread(
+        fd, program_headers, sizeof(Elf32_Phdr) * elf_header.e_phnum,
+        elf_header.e_phoff
+    );
 
     // Read section header string table
     Elf32_Shdr sh_strtab = section_headers[elf_header.e_shstrndx];
-    char* sh_strs = malloc(sh_strtab.sh_size);
+    char *sh_strs = malloc(sh_strtab.sh_size);
     pread(fd, sh_strs, sh_strtab.sh_size, sh_strtab.sh_offset);
 
     // Set section sizes to 0 (incase program doesn't contain data)
@@ -102,38 +117,44 @@ Program* parse_program(const char* filename) {
     program->bss_size = 0;
 
     for (int i = 0; i < elf_header.e_shnum; i++) {
-        const char* name = &sh_strs[section_headers[i].sh_name];
+        const char *name = &sh_strs[section_headers[i].sh_name];
 
-        if (strcmp(name, ".text") == 0) {                                       // Text Section
+        if (strcmp(name, ".text") == 0) { // Text Section
             program->text_size = section_headers[i].sh_size;
             program->text_data = malloc(program->text_size);
             Elf32_Off text_offset = section_headers[i].sh_offset;
             pread(fd, program->text_data, program->text_size, text_offset);
-        } else if (strcmp(name, ".data") == 0) {                                // Data Section
+        }
+        else if (strcmp(name, ".data") == 0) { // Data Section
             program->data_size = section_headers[i].sh_size;
             program->data_data = malloc(program->data_size);
             Elf32_Off data_offset = section_headers[i].sh_offset;
             pread(fd, program->data_data, program->data_size, data_offset);
-        } else if (strcmp(name, ".rodata") == 0) {                              // Read-only Section
+        }
+        else if (strcmp(name, ".rodata") == 0) { // Read-only Section
             program->rodata_size = section_headers[i].sh_size;
             program->rodata_data = malloc(program->rodata_size);
             Elf32_Off rodata_offset = section_headers[i].sh_offset;
-            pread(fd, program->rodata_data, program->rodata_size, rodata_offset);
-        } else if (strcmp(name, ".bss") == 0) {                                 // BSS Section
+            pread(
+                fd, program->rodata_data, program->rodata_size, rodata_offset
+            );
+        }
+        else if (strcmp(name, ".bss") == 0) { // BSS Section
             program->bss_size = section_headers[i].sh_size;
-        } else if (strcmp(name, ".symtab") == 0) {                              // Symbol Table
+        }
+        else if (strcmp(name, ".symtab") == 0) { // Symbol Table
             Elf32_Shdr symtab = section_headers[i];
             Elf32_Shdr strtab = section_headers[symtab.sh_link];
 
             int num_syms = symtab.sh_size / sizeof(Elf32_Sym);
-            Elf32_Sym* syms = malloc(symtab.sh_size);
-            char* strtab_data = malloc(strtab.sh_size);
+            Elf32_Sym *syms = malloc(symtab.sh_size);
+            char *strtab_data = malloc(strtab.sh_size);
 
             pread(fd, syms, symtab.sh_size, symtab.sh_offset);
             pread(fd, strtab_data, strtab.sh_size, strtab.sh_offset);
 
             for (int j = 0; j < num_syms; j++) {
-                const char* sym_name = &strtab_data[syms[j].st_name];
+                const char *sym_name = &strtab_data[syms[j].st_name];
                 if (strcmp(sym_name, "main") == 0) {
                     program->entry_point = syms[j].st_value;
                     break;
@@ -150,7 +171,7 @@ Program* parse_program(const char* filename) {
     return program;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 
     // Argument checking
     if (argc < 2) {
@@ -172,18 +193,18 @@ int main(int argc, char** argv) {
 
     printf("Valid ELF Files...\n");
 
-    int executable_count = argc-1;
-    unsigned char executable_count_byte = (unsigned char)executable_count;
-    Program* program[executable_count];
+    int executable_count = argc - 1;
+    unsigned char executable_count_byte = (unsigned char) executable_count;
+    Program *program[executable_count];
 
     for (int i = 1; i < argc; i++) {
         printf("Collecting data on %s...\n", argv[i]);
-        program[i-1] = parse_program(argv[i]);
+        program[i - 1] = parse_program(argv[i]);
     }
 
-    #ifdef TESTING
+#ifdef TESTING
     for (int i = 0; i < executable_count; i++) {
-        printf("Info on file: %s\n", argv[i+1]);
+        printf("Info on file: %s\n", argv[i + 1]);
         printf("Entry Point- %x\n", program[i]->entry_point);
         printf("Text Size-   %x\n", program[i]->text_size);
         printf("ROdata Size- %x\n", program[i]->rodata_size);
@@ -215,14 +236,19 @@ int main(int argc, char** argv) {
         }
         printf("\n\n");
     }
-    #endif
+#endif
 
     // Construct Table Entries
     uint32_t current_offset = 4 + (executable_count * sizeof(TableEntry));
-    TableEntry* table_entry[executable_count];
+    TableEntry *table_entry[executable_count];
     for (int i = 0; i < executable_count; i++) {
-        table_entry[i] = (TableEntry*)malloc(sizeof(TableEntry));
-        strncpy(table_entry[i]->name, strrchr(argv[i+1], '/') ? strrchr(argv[i+1], '/') + 1 : argv[i+1], 15);
+        table_entry[i] = (TableEntry *) malloc(sizeof(TableEntry));
+        strncpy(
+            table_entry[i]->name,
+            strrchr(argv[i + 1], '/') ? strrchr(argv[i + 1], '/') + 1
+                                      : argv[i + 1],
+            15
+        );
         table_entry[i]->name[15] = '\0';
         table_entry[i]->offset = current_offset;
         table_entry[i]->entry_point = program[i]->entry_point;
@@ -230,13 +256,15 @@ int main(int argc, char** argv) {
         table_entry[i]->rodata_size = program[i]->rodata_size;
         table_entry[i]->data_size = program[i]->data_size;
         table_entry[i]->bss_size = program[i]->bss_size;
-        current_offset += table_entry[i]->text_size + table_entry[i]->rodata_size + table_entry[i]->data_size;
+        current_offset += table_entry[i]->text_size +
+                          table_entry[i]->rodata_size +
+                          table_entry[i]->data_size;
     }
 
     printf("Constructing sun executable\n");
     int sun_fd = open("binary.sun", O_CREAT | O_WRONLY | O_TRUNC, 0644);
-    write(sun_fd, "SUN", 3); // Magic bytes
-    write(sun_fd, &executable_count_byte, 1); // Exe count
+    write(sun_fd, "SUN", 3);                     // Magic bytes
+    write(sun_fd, &executable_count_byte, 1);    // Exe count
     for (int i = 0; i < executable_count; i++) { // Table Entry info
         write(sun_fd, table_entry[i]->name, 16);
         write(sun_fd, &table_entry[i]->offset, 4);
@@ -246,7 +274,7 @@ int main(int argc, char** argv) {
         write(sun_fd, &table_entry[i]->data_size, 4);
         write(sun_fd, &table_entry[i]->bss_size, 4);
     }
-    
+
     for (int i = 0; i < executable_count; i++) { // Section data
         if (program[i]->text_size > 0)
             write(sun_fd, program[i]->text_data, program[i]->text_size);
