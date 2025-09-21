@@ -153,13 +153,23 @@ Program *parse_program(const char *filename) {
             pread(fd, syms, symtab.sh_size, symtab.sh_offset);
             pread(fd, strtab_data, strtab.sh_size, strtab.sh_offset);
 
+            uint32_t main_addr = 0;
+            uint32_t start_addr = 0;
+
             for (int j = 0; j < num_syms; j++) {
                 const char *sym_name = &strtab_data[syms[j].st_name];
                 if (strcmp(sym_name, "main") == 0) {
+                    main_addr = syms[j].st_value;
                     program->entry_point = syms[j].st_value;
-                    break;
+                }
+                if (strcmp(sym_name, "_start") == 0) {
+                    start_addr = syms[j].st_value;
+                    program->entry_point = syms[j].st_value;
                 }
             }
+
+            program->entry_point = (start_addr == 0) ? main_addr : start_addr;
+
             free(syms);
             free(strtab_data);
         }
