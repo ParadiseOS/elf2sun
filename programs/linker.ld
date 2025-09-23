@@ -1,3 +1,5 @@
+ENTRY(_start)
+
 SECTIONS {
     /* Process Origin */
     . = 0x402000;

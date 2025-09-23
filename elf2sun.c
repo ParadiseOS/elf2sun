@@ -110,7 +110,7 @@ Program *parse_program(const char *filename) {
     pread(fd, sh_strs, sh_strtab.sh_size, sh_strtab.sh_offset);
 
     // Set section sizes to 0 (incase program doesn't contain data)
-    program->entry_point = 0;
+    program->entry_point = elf_header.e_entry; // Expected to be _start
     program->text_size = 0;
     program->data_size = 0;
     program->rodata_size = 0;
@@ -141,37 +141,6 @@ Program *parse_program(const char *filename) {
         }
         else if (strcmp(name, ".bss") == 0) { // BSS Section
             program->bss_size = section_headers[i].sh_size;
-        }
-        else if (strcmp(name, ".symtab") == 0) { // Symbol Table
-            Elf32_Shdr symtab = section_headers[i];
-            Elf32_Shdr strtab = section_headers[symtab.sh_link];
-
-            int num_syms = symtab.sh_size / sizeof(Elf32_Sym);
-            Elf32_Sym *syms = malloc(symtab.sh_size);
-            char *strtab_data = malloc(strtab.sh_size);
-
-            pread(fd, syms, symtab.sh_size, symtab.sh_offset);
-            pread(fd, strtab_data, strtab.sh_size, strtab.sh_offset);
-
-            uint32_t main_addr = 0;
-            uint32_t start_addr = 0;
-
-            for (int j = 0; j < num_syms; j++) {
-                const char *sym_name = &strtab_data[syms[j].st_name];
-                if (strcmp(sym_name, "main") == 0) {
-                    main_addr = syms[j].st_value;
-                    program->entry_point = syms[j].st_value;
-                }
-                if (strcmp(sym_name, "_start") == 0) {
-                    start_addr = syms[j].st_value;
-                    program->entry_point = syms[j].st_value;
-                }
-            }
-
-            program->entry_point = (start_addr == 0) ? main_addr : start_addr;
-
-            free(syms);
-            free(strtab_data);
         }
     }
 
